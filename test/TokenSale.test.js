@@ -1,12 +1,15 @@
 const chai = require("chai");
 const { expect } = require("chai");
 const { solidity } = require("ethereum-waffle");
+const {
+  main,
+} = require("../grpc/oracle-pull-example/javascript/evm_client/main");
 
 chai.use(solidity);
 
 describe("TokenSwap and TokenVest", () => {
   let token, tokenSwap, owner, user1, user2, user3;
-  const sValueFeed = "0x6Cd59830AAD978446e6cc7f6cc173aF7656Fb917";
+  const oracle = "0xC9DA2B1c5ea1a7207Bf5829416d5Bc6c082f87CF";
   const ONE_DAY_IN_SECS = 24 * 60 * 60;
   const saleStartTime = ONE_DAY_IN_SECS * 7;
   const saleDuration = ONE_DAY_IN_SECS * 9;
@@ -29,7 +32,7 @@ describe("TokenSwap and TokenVest", () => {
     Factory = await ethers.getContractFactory("TokenSale");
     tokenSwap = await Factory.deploy(
       owner.address,
-      sValueFeed,
+      oracle,
       token.address,
       saleStartTime,
       saleDuration,
@@ -64,7 +67,7 @@ describe("TokenSwap and TokenVest", () => {
 
     it("Should fail if purchase when sale hasn't started", async () => {
       await expect(
-        tokenSwap.connect(user1).purchaseTokens(user1.address)
+        tokenSwap.connect(user1).purchaseTokens(await main(), user1.address)
       ).to.revertedWith("Sale has not started");
     });
 
@@ -74,15 +77,17 @@ describe("TokenSwap and TokenVest", () => {
       await ethers.provider.send("evm_mine");
 
       await expect(
-        tokenSwap.connect(user1).purchaseTokens(user1.address, {
+        tokenSwap.connect(user1).purchaseTokens(await main(), user1.address, {
           value: ethers.utils.parseUnits("0.000000000000000001", "ether"),
         })
       ).to.revertedWith("ETH is too small");
+
+      // console.log("see: ", await tokenSwap.getOraclePrice(await main()));
     });
 
     it("Should fail if there aren't enough tokens to buy", async () => {
       await expect(
-        tokenSwap.connect(user1).purchaseTokens(user1.address, {
+        tokenSwap.connect(user1).purchaseTokens(await main(), user1.address, {
           value: ethers.utils.parseUnits("1", "ether"),
         })
       ).to.revertedWith("Not enough tokens left");
@@ -109,9 +114,11 @@ describe("TokenSwap and TokenVest", () => {
       ///
       /// First buy - user1 ///
       ///
-      await tokenSwap.connect(user1).purchaseTokens(user1.address, {
-        value: ethers.utils.parseUnits("1", "ether"),
-      });
+      await tokenSwap
+        .connect(user1)
+        .purchaseTokens(await main(), user1.address, {
+          value: ethers.utils.parseUnits("1", "ether"),
+        });
       // confirm supply increase in the NFT
       expect(await tokenSwap.totalSupply()).to.equal(1);
 
@@ -126,9 +133,11 @@ describe("TokenSwap and TokenVest", () => {
       ///
       /// Second buy - user2 ///
       ///
-      await tokenSwap.connect(user2).purchaseTokens(user2.address, {
-        value: ethers.utils.parseUnits("2", "ether"),
-      });
+      await tokenSwap
+        .connect(user2)
+        .purchaseTokens(await main(), user2.address, {
+          value: ethers.utils.parseUnits("2", "ether"),
+        });
       // confirm supply increase in the NFT
       expect(await tokenSwap.totalSupply()).to.equal(2);
 
@@ -154,9 +163,11 @@ describe("TokenSwap and TokenVest", () => {
       /// Third buy - user1 ///
       ///
 
-      await tokenSwap.connect(user1).purchaseTokens(user1.address, {
-        value: ethers.utils.parseUnits("1", "ether"),
-      });
+      await tokenSwap
+        .connect(user1)
+        .purchaseTokens(await main(), user1.address, {
+          value: ethers.utils.parseUnits("1", "ether"),
+        });
 
       // confirm NFT supply doesn't increase since user already purchased
       expect(await tokenSwap.totalSupply()).to.equal(2);
@@ -178,9 +189,11 @@ describe("TokenSwap and TokenVest", () => {
       /// Forth buy - user2 ///
       ///
 
-      await tokenSwap.connect(user2).purchaseTokens(user2.address, {
-        value: ethers.utils.parseUnits("2", "ether"),
-      });
+      await tokenSwap
+        .connect(user2)
+        .purchaseTokens(await main(), user2.address, {
+          value: ethers.utils.parseUnits("2", "ether"),
+        });
 
       // confirm NFT supply doesn't increase since user already purchased
       expect(await tokenSwap.totalSupply()).to.equal(2);

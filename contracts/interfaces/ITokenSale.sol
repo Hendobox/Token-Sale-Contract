@@ -37,9 +37,13 @@ interface ITokenSale {
 
     /**
      * @dev Allows a user to purchase tokens with ETH.
+     * @param _bytesProof The proof of the request from Supra Pull Oracle.
      * @param recipient The address of the recipient who will receive the tokens.
      */
-    function purchaseTokens(address recipient) external payable;
+    function purchaseTokens(
+        bytes calldata _bytesProof,
+        address recipient
+    ) external payable;
 
     /**
      * @dev Allows the owner to set the initial token price.

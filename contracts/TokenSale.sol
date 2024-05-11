@@ -3,7 +3,7 @@ pragma solidity 0.8.24;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ITokenSale} from "./interfaces/ITokenSale.sol";
-import {ISupraSValueFeed} from "./interfaces/ISupraSValueFeed.sol";
+import {ISupraOraclePull} from "./interfaces/ISupraOraclePull.sol";
 import {TokenVest, SafeERC20, IERC20} from "./TokenVest.sol";
 import {AddressConversionUtils} from "./libraries/AddressConversionUtils.sol";
 
@@ -22,14 +22,14 @@ contract TokenSale is ITokenSale, TokenVest, Ownable {
     uint64 public immutable priceIncreaseInterval;
     uint256 initialTokenPriceInUSD;
     uint256 public immutable priceIncreaseAmount;
-    uint256 supraPairId = 19; // ETH_USD on supra
+    uint256 public constant PAIR_ID = 19; // ETH_USD on supra
     uint256 public totalBuys;
-    ISupraSValueFeed internal immutable sValueFeed;
+    ISupraOraclePull internal immutable oracle;
 
     /**
      * @dev Constructor to initialize the TokenSale contract.
      * @param initialOwner The address of the initial owner of the contract.
-     * @param _sValueFeed The address of the SupraSValueFeed contract.
+     * @param _oracle The address of the Supraoracle contract.
      * @param _token The address of the token to be sold.
      * @param _saleStartTime The start time of the token sale.
      * @param _saleDuration The duration of the token sale.
@@ -40,7 +40,7 @@ contract TokenSale is ITokenSale, TokenVest, Ownable {
      */
     constructor(
         address initialOwner,
-        address _sValueFeed,
+        address _oracle,
         address _token,
         uint64 _saleStartTime,
         uint64 _saleDuration,
@@ -56,7 +56,7 @@ contract TokenSale is ITokenSale, TokenVest, Ownable {
         )
         Ownable(initialOwner)
     {
-        sValueFeed = ISupraSValueFeed(_sValueFeed);
+        oracle = ISupraOraclePull(_oracle);
         initialTokenPriceInUSD = _initialPrice;
         saleStartTime = uint64(block.timestamp) + _saleStartTime;
         saleDuration = _saleDuration;
@@ -65,7 +65,10 @@ contract TokenSale is ITokenSale, TokenVest, Ownable {
     }
 
     /// @inheritdoc ITokenSale
-    function purchaseTokens(address recipient) external payable {
+    function purchaseTokens(
+        bytes calldata _bytesProof,
+        address recipient
+    ) external payable {
         uint64 _saleStartTime = saleStartTime;
         require(block.timestamp >= _saleStartTime, "Sale has not started");
         require(
@@ -73,8 +76,9 @@ contract TokenSale is ITokenSale, TokenVest, Ownable {
             "Sale has ended"
         );
 
-        ISupraSValueFeed.priceFeed memory data = _getSvalue();
-        uint256 usdValue = msg.value; // * data.price;
+        ISupraOraclePull.PriceData memory price = getOraclePrice(_bytesProof);
+        uint256 usdValue = msg.value *
+            (price.prices[0] / (10 ** price.decimals[0]));
         uint256 tokenPrice = _getPrice();
         require(usdValue >= tokenPrice, "ETH is too small");
         uint256 amount = usdValue / tokenPrice;
@@ -132,6 +136,15 @@ contract TokenSale is ITokenSale, TokenVest, Ownable {
         price = _getPrice();
     }
 
+    // Get the price of a pair from oracle data received from supra pull model
+    function getOraclePrice(
+        bytes memory _bytesProof
+    ) public returns (ISupraOraclePull.PriceData memory price) {
+        price = oracle.verifyOracleProof(_bytesProof);
+        require(price.pairs[0] == PAIR_ID, "Invalid pair");
+        require(price.prices[0] != 0, "Pair not found");
+    }
+
     /**
      * @dev Private function to calculate the current token price.
      * @return The current token price.
@@ -147,17 +160,5 @@ contract TokenSale is ITokenSale, TokenVest, Ownable {
         uint256 intervalsPassed = elapsedTime / priceIncreaseInterval;
         return (initialTokenPriceInUSD +
             (intervalsPassed * priceIncreaseAmount));
-    }
-
-    /**
-     * @dev Private function to retrieve the current price feed from SupraSValueFeed.
-     * @return The current price feed.
-     */
-    function _getSvalue()
-        private
-        view
-        returns (ISupraSValueFeed.priceFeed memory)
-    {
-        return (sValueFeed.getSvalue(supraPairId));
     }
 }

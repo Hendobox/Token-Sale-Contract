@@ -1,0 +1,33 @@
+{
+  "name": "token-sale-contract",
+  "version": "1.0.0",
+  "description": "<a href=\"https://github.com/new?owner=Leggo-Build&template_name=interview-token-sale&template_owner=Leggo-Build\" target=\"_blank\" rel=\"noopener noreferrer\">   <img src=\"https://img.shields.io/:Use_This_Template-238636.svg?logo=github&logoColor=whitesmoke\" height=\"30px\" /> </a>",
+  "main": "index.js",
+  "scripts": {
+    "test": "npx hardhat test",
+    "coverage": "npx hardhat coverage"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hendobox/Token-Sale-Contract.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Hendobox/Token-Sale-Contract/issues"
+  },
+  "homepage": "https://github.com/Hendobox/Token-Sale-Contract#readme",
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.5",
+    "chai": "^4.4.1",
+    "ethereum-waffle": "^3.4.4",
+    "ethers": "^5.6.5",
+    "hardhat": "^2.9.3",
+    "hardhat-gas-reporter": "^1.0.10",
+    "solidity-coverage": "^0.8.12"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.2"
+  }
+}

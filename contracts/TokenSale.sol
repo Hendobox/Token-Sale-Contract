@@ -77,9 +77,13 @@ contract TokenSale is ITokenSale, TokenVest, Ownable {
         );
 
         ISupraOraclePull.PriceData memory price = getOraclePrice(_bytesProof);
-        uint256 usdValue = msg.value *
-            (price.prices[0] / (10 ** price.decimals[0]));
+        uint256 usdValue = (msg.value * price.prices[0]) /
+            (10 ** price.decimals[0]);
         uint256 tokenPrice = _getPrice();
+
+        // console.log("usdValue", usdValue);
+        // console.log("tokenPrice", tokenPrice);
+
         require(usdValue >= tokenPrice, "ETH is too small");
         uint256 amount = usdValue / tokenPrice;
 

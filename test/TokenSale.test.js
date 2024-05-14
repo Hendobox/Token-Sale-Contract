@@ -20,7 +20,6 @@ describe("TokenSwap and TokenVest", () => {
   const priceIncreaseAmount = 5;
   const saleSupply = ethers.utils.parseUnits("10000", "ether");
 
-
   const addressToUint256 = (address) => {
     return ethers.BigNumber.from(ethers.utils.getAddress(address));
   };
@@ -79,20 +78,27 @@ describe("TokenSwap and TokenVest", () => {
       await ethers.provider.send("evm_increaseTime", [ONE_DAY_IN_SECS * 7]);
       await ethers.provider.send("evm_mine");
 
+      // make token price higher than oracle price * value
+      await tokenSwap.setInitialTokenPrice(10000);
+
       const proofBytes = getProofBytes();
-      
+
       await expect(
         tokenSwap.connect(user1).purchaseTokens(proofBytes, user1.address, {
-          value: ethers.utils.parseUnits("0.000000000000000001", "ether"),
+          value: ethers.utils.parseEther("0.000000000000000001"),
         })
       ).to.revertedWith("ETH is too small");
 
-      // console.log("see: ", await tokenSwap.getOraclePrice(getProofBytes));
+      // reset token price
+      await tokenSwap.setInitialTokenPrice(initialPrice);
+
+      // console.log("see oracle feed: ", await tokenSwap.getOraclePrice(proofBytes));
     });
 
     it("Should fail if there aren't enough tokens to buy", async () => {
+      const proofBytes = getProofBytes();
       await expect(
-        tokenSwap.connect(user1).purchaseTokens(getProofBytes, user1.address, {
+        tokenSwap.connect(user1).purchaseTokens(proofBytes, user1.address, {
           value: ethers.utils.parseUnits("1", "ether"),
         })
       ).to.revertedWith("Not enough tokens left");
@@ -121,11 +127,9 @@ describe("TokenSwap and TokenVest", () => {
       ///
       const proofBytes = getProofBytes();
 
-      await tokenSwap
-        .connect(user1)
-        .purchaseTokens(proofBytes, user1.address, {
-          value: ethers.utils.parseUnits("1", "ether"),
-        });
+      await tokenSwap.connect(user1).purchaseTokens(proofBytes, user1.address, {
+        value: ethers.utils.parseUnits("1", "ether"),
+      });
       // confirm supply increase in the NFT
       expect(await tokenSwap.totalSupply()).to.equal(1);
 

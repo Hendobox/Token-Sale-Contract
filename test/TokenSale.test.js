@@ -10,7 +10,7 @@ chai.use(solidity);
 
 describe("TokenSwap and TokenVest", () => {
   let token, tokenSwap, owner, user1, user2, user3;
-  const oracle = "0xC9DA2B1c5ea1a7207Bf5829416d5Bc6c082f87CF";
+  const oracle = "0x41AB2059bAA4b73E9A3f55D30Dff27179e0eA181";
   const ONE_DAY_IN_SECS = 24 * 60 * 60;
   const saleStartTime = ONE_DAY_IN_SECS * 7;
   const saleDuration = ONE_DAY_IN_SECS * 9;
@@ -19,6 +19,7 @@ describe("TokenSwap and TokenVest", () => {
   const priceIncreaseInterval = ONE_DAY_IN_SECS * 3;
   const priceIncreaseAmount = 5;
   const saleSupply = ethers.utils.parseUnits("10000", "ether");
+
 
   const addressToUint256 = (address) => {
     return ethers.BigNumber.from(ethers.utils.getAddress(address));
@@ -67,8 +68,9 @@ describe("TokenSwap and TokenVest", () => {
     });
 
     it("Should fail if purchase when sale hasn't started", async () => {
+      const proofBytes = getProofBytes();
       await expect(
-        tokenSwap.connect(user1).purchaseTokens(getProofBytes, user1.address)
+        tokenSwap.connect(user1).purchaseTokens(proofBytes, user1.address)
       ).to.revertedWith("Sale has not started");
     });
 
@@ -77,8 +79,10 @@ describe("TokenSwap and TokenVest", () => {
       await ethers.provider.send("evm_increaseTime", [ONE_DAY_IN_SECS * 7]);
       await ethers.provider.send("evm_mine");
 
+      const proofBytes = getProofBytes();
+      
       await expect(
-        tokenSwap.connect(user1).purchaseTokens(getProofBytes, user1.address, {
+        tokenSwap.connect(user1).purchaseTokens(proofBytes, user1.address, {
           value: ethers.utils.parseUnits("0.000000000000000001", "ether"),
         })
       ).to.revertedWith("ETH is too small");
@@ -115,9 +119,11 @@ describe("TokenSwap and TokenVest", () => {
       ///
       /// First buy - user1 ///
       ///
+      const proofBytes = getProofBytes();
+
       await tokenSwap
         .connect(user1)
-        .purchaseTokens(getProofBytes, user1.address, {
+        .purchaseTokens(proofBytes, user1.address, {
           value: ethers.utils.parseUnits("1", "ether"),
         });
       // confirm supply increase in the NFT
@@ -134,9 +140,11 @@ describe("TokenSwap and TokenVest", () => {
       ///
       /// Second buy - user2 ///
       ///
+      const proofBytes2 = getProofBytes();
+
       await tokenSwap
         .connect(user2)
-        .purchaseTokens(getProofBytes, user2.address, {
+        .purchaseTokens(proofBytes2, user2.address, {
           value: ethers.utils.parseUnits("2", "ether"),
         });
       // confirm supply increase in the NFT
@@ -163,10 +171,11 @@ describe("TokenSwap and TokenVest", () => {
       ///
       /// Third buy - user1 ///
       ///
+      const proofBytes3 = getProofBytes();
 
       await tokenSwap
         .connect(user1)
-        .purchaseTokens(getProofBytes, user1.address, {
+        .purchaseTokens(proofBytes3, user1.address, {
           value: ethers.utils.parseUnits("1", "ether"),
         });
 
@@ -189,10 +198,11 @@ describe("TokenSwap and TokenVest", () => {
       ///
       /// Forth buy - user2 ///
       ///
+      const proofBytes4 = getProofBytes();
 
       await tokenSwap
         .connect(user2)
-        .purchaseTokens(getProofBytes, user2.address, {
+        .purchaseTokens(proofBytes4, user2.address, {
           value: ethers.utils.parseUnits("2", "ether"),
         });
 

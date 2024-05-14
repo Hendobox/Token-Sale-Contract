@@ -8,9 +8,10 @@ module.exports = {
   networks: {
     hardhat: {
       forking: {
-        url: "https://arbitrum-sepolia.blockpi.network/v1/rpc/public",
-        chainId: 421614,
-        blockNumber: 1419835,
+        url: "https://arbitrum.gateway.tenderly.co/[YOUR_API_KEY]",
+        chainId: 42161,
+        blockNumber: 210983988,
+        loggingEnabled: true,
       },
     },
   },

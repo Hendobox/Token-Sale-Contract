@@ -2,14 +2,15 @@ const chai = require("chai");
 const { expect } = require("chai");
 const { solidity } = require("ethereum-waffle");
 const {
-  main,
-} = require("../grpc/oracle-pull-example/javascript/evm_client/main");
+  getSimpleProofBytes,
+  getProofBytes,
+} = require("../ignition/grpc/evm_client/utils");
 
 chai.use(solidity);
 
 describe("TokenSwap and TokenVest", () => {
   let token, tokenSwap, owner, user1, user2, user3;
-  const oracle = "0xC9DA2B1c5ea1a7207Bf5829416d5Bc6c082f87CF";
+  const oracle = "0x41AB2059bAA4b73E9A3f55D30Dff27179e0eA181";
   const ONE_DAY_IN_SECS = 24 * 60 * 60;
   const saleStartTime = ONE_DAY_IN_SECS * 7;
   const saleDuration = ONE_DAY_IN_SECS * 9;
@@ -66,8 +67,9 @@ describe("TokenSwap and TokenVest", () => {
     });
 
     it("Should fail if purchase when sale hasn't started", async () => {
+      const proofBytes = getProofBytes();
       await expect(
-        tokenSwap.connect(user1).purchaseTokens(await main(), user1.address)
+        tokenSwap.connect(user1).purchaseTokens(proofBytes, user1.address)
       ).to.revertedWith("Sale has not started");
     });
 
@@ -76,18 +78,27 @@ describe("TokenSwap and TokenVest", () => {
       await ethers.provider.send("evm_increaseTime", [ONE_DAY_IN_SECS * 7]);
       await ethers.provider.send("evm_mine");
 
+      // make token price higher than oracle price * value
+      await tokenSwap.setInitialTokenPrice(10000);
+
+      const proofBytes = getProofBytes();
+
       await expect(
-        tokenSwap.connect(user1).purchaseTokens(await main(), user1.address, {
-          value: ethers.utils.parseUnits("0.000000000000000001", "ether"),
+        tokenSwap.connect(user1).purchaseTokens(proofBytes, user1.address, {
+          value: ethers.utils.parseEther("0.000000000000000001"),
         })
       ).to.revertedWith("ETH is too small");
 
-      // console.log("see: ", await tokenSwap.getOraclePrice(await main()));
+      // reset token price
+      await tokenSwap.setInitialTokenPrice(initialPrice);
+
+      // console.log("see oracle feed: ", await tokenSwap.getOraclePrice(proofBytes));
     });
 
     it("Should fail if there aren't enough tokens to buy", async () => {
+      const proofBytes = getProofBytes();
       await expect(
-        tokenSwap.connect(user1).purchaseTokens(await main(), user1.address, {
+        tokenSwap.connect(user1).purchaseTokens(proofBytes, user1.address, {
           value: ethers.utils.parseUnits("1", "ether"),
         })
       ).to.revertedWith("Not enough tokens left");
@@ -114,11 +125,11 @@ describe("TokenSwap and TokenVest", () => {
       ///
       /// First buy - user1 ///
       ///
-      await tokenSwap
-        .connect(user1)
-        .purchaseTokens(await main(), user1.address, {
-          value: ethers.utils.parseUnits("1", "ether"),
-        });
+      const proofBytes = getProofBytes();
+
+      await tokenSwap.connect(user1).purchaseTokens(proofBytes, user1.address, {
+        value: ethers.utils.parseUnits("1", "ether"),
+      });
       // confirm supply increase in the NFT
       expect(await tokenSwap.totalSupply()).to.equal(1);
 
@@ -133,9 +144,11 @@ describe("TokenSwap and TokenVest", () => {
       ///
       /// Second buy - user2 ///
       ///
+      const proofBytes2 = getProofBytes();
+
       await tokenSwap
         .connect(user2)
-        .purchaseTokens(await main(), user2.address, {
+        .purchaseTokens(proofBytes2, user2.address, {
           value: ethers.utils.parseUnits("2", "ether"),
         });
       // confirm supply increase in the NFT
@@ -162,10 +175,11 @@ describe("TokenSwap and TokenVest", () => {
       ///
       /// Third buy - user1 ///
       ///
+      const proofBytes3 = getProofBytes();
 
       await tokenSwap
         .connect(user1)
-        .purchaseTokens(await main(), user1.address, {
+        .purchaseTokens(proofBytes3, user1.address, {
           value: ethers.utils.parseUnits("1", "ether"),
         });
 
@@ -188,10 +202,11 @@ describe("TokenSwap and TokenVest", () => {
       ///
       /// Forth buy - user2 ///
       ///
+      const proofBytes4 = getProofBytes();
 
       await tokenSwap
         .connect(user2)
-        .purchaseTokens(await main(), user2.address, {
+        .purchaseTokens(proofBytes4, user2.address, {
           value: ethers.utils.parseUnits("2", "ether"),
         });
 

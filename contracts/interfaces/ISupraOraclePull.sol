@@ -12,9 +12,7 @@ interface ISupraOraclePull {
         // List of decimals
         // decimals[i] is the decimals of pairs[i]
         uint256[] decimals;
-        // List of round
-        // round[i] is the round of pairs[i]
-        uint256[] round;
+
     }
 
     function verifyOracleProof(

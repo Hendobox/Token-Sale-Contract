@@ -1,22 +1,19 @@
 const chai = require("chai");
 const { expect } = require("chai");
 const { solidity } = require("ethereum-waffle");
-const {
-  getSimpleProofBytes,
-  getProofBytes,
-} = require("../ignition/grpc/evm_client/utils");
+const { getProofBytes } = require("../ignition/grpc/evm_client/utils");
+const { deploy, spendTime, day, week, month } = require("hardhat-libutils");
 
 chai.use(solidity);
 
 describe("TokenSwap and TokenVest", () => {
   let token, tokenSwap, owner, user1, user2, user3;
   const oracle = "0x41AB2059bAA4b73E9A3f55D30Dff27179e0eA181";
-  const ONE_DAY_IN_SECS = 24 * 60 * 60;
-  const saleStartTime = ONE_DAY_IN_SECS * 7;
-  const saleDuration = ONE_DAY_IN_SECS * 9;
-  const vestDuration = ONE_DAY_IN_SECS * 30;
+  const saleStartTime = week;
+  const saleDuration = day * 9;
+  const vestDuration = month;
   const initialPrice = 9;
-  const priceIncreaseInterval = ONE_DAY_IN_SECS * 3;
+  const priceIncreaseInterval = day * 3;
   const priceIncreaseAmount = 5;
   const saleSupply = ethers.utils.parseUnits("10000", "ether");
 
@@ -26,12 +23,12 @@ describe("TokenSwap and TokenVest", () => {
   before(async () => {
     [owner, user1, user2, user3] = await ethers.getSigners();
     // We deploy the Token contract
-    let Factory = await ethers.getContractFactory("Token");
-    token = await Factory.deploy();
+    token = await deploy("Token", "Token");
 
     // We deploy the TokenSale contract
-    Factory = await ethers.getContractFactory("TokenSale");
-    tokenSwap = await Factory.deploy(
+    tokenSwap = await deploy(
+      "TokenSale",
+      "TokenSale",
       owner.address,
       oracle,
       token.address,
@@ -75,8 +72,7 @@ describe("TokenSwap and TokenVest", () => {
 
     it("Should fail if purchase doesn't have enough ETH", async () => {
       // Advance time by 7 days to reach the sale start time
-      await ethers.provider.send("evm_increaseTime", [ONE_DAY_IN_SECS * 7]);
-      await ethers.provider.send("evm_mine");
+      await spendTime(week);
 
       // make token price higher than oracle price * value
       await tokenSwap.setInitialTokenPrice(10000);
@@ -92,7 +88,7 @@ describe("TokenSwap and TokenVest", () => {
       // reset token price
       await tokenSwap.setInitialTokenPrice(initialPrice);
 
-      // console.log("see oracle feed: ", await tokenSwap.getOraclePrice(proofBytes));
+      // log("see oracle feed: ", await tokenSwap.getOraclePrice(proofBytes));
     });
 
     it("Should fail if there aren't enough tokens to buy", async () => {
@@ -164,8 +160,7 @@ describe("TokenSwap and TokenVest", () => {
       ).to.equal(await tokenSwap.totalBuys());
 
       /// Increment past 3 days
-      await ethers.provider.send("evm_increaseTime", [ONE_DAY_IN_SECS * 3]);
-      await ethers.provider.send("evm_mine");
+      await spendTime(day * 3);
 
       // confirm token price increment by 50%
       expect(Number(await tokenSwap.getPrice())).to.be.equal(
@@ -193,8 +188,7 @@ describe("TokenSwap and TokenVest", () => {
       );
 
       /// Increment to the 6th day
-      await ethers.provider.send("evm_increaseTime", [ONE_DAY_IN_SECS * 3]);
-      await ethers.provider.send("evm_mine");
+      await spendTime(day * 3);
 
       // confirm token price increment by 100%
       expect(Number(await tokenSwap.getPrice())).to.be.equal(newPrice * 2);
@@ -240,8 +234,7 @@ describe("TokenSwap and TokenVest", () => {
 
     it("Should claim tokens correctly", async () => {
       /// Increment to vesting start period
-      await ethers.provider.send("evm_increaseTime", [ONE_DAY_IN_SECS * 3]);
-      await ethers.provider.send("evm_mine");
+      await spendTime(day * 3);
 
       // Recover excess tokens left unbought
       await tokenSwap.recoverExcess(user3.address);
@@ -254,8 +247,7 @@ describe("TokenSwap and TokenVest", () => {
       );
 
       /// Increment into vesting to obtain claimable amount
-      await ethers.provider.send("evm_increaseTime", [ONE_DAY_IN_SECS * 15]);
-      await ethers.provider.send("evm_mine");
+      await spendTime(day * 15);
 
       let claimableUser1 = await tokenSwap.getClaimable(user1.address);
       expect(claimableUser1).to.equal(
@@ -276,8 +268,7 @@ describe("TokenSwap and TokenVest", () => {
       );
 
       /// Increment
-      await ethers.provider.send("evm_increaseTime", [ONE_DAY_IN_SECS * 5]);
-      await ethers.provider.send("evm_mine");
+      await spendTime(day * 5);
 
       let claimableUser2 = await tokenSwap.getClaimable(user2.address);
       let balanceUser2 = await tokenSwap.getBalance(user2.address);
@@ -294,8 +285,7 @@ describe("TokenSwap and TokenVest", () => {
       );
 
       /// Increment
-      await ethers.provider.send("evm_increaseTime", [ONE_DAY_IN_SECS * 10]);
-      await ethers.provider.send("evm_mine");
+      await spendTime(day * 10);
 
       ///
       /// Third token claim - user2 ///
